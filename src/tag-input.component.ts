@@ -4,9 +4,8 @@ import {isBlank} from '@angular/common/src/facade/lang';
 import {TagInputItemComponent} from './tag-input-item.component';
 
 @Component({
-  selector: 'tag-input',
-  template:
-  `<tag-input-item
+    selector: 'tag-input',
+    template: `<tag-input-item
     [text]="tag"
     [index]="index"
     [selected]="selectedTag === index"
@@ -24,7 +23,7 @@ import {TagInputItemComponent} from './tag-input-item.component';
     (focus)="inputFocused()"
     #tagInputRef>`,
 
-  styles: [`
+    styles    : [`
     :host {
       display: block;
       box-shadow: 0 1px #ccc;
@@ -42,126 +41,140 @@ import {TagInputItemComponent} from './tag-input-item.component';
       border: 0;
     }
   `],
-  directives: [TagInputItemComponent]
+    directives: [TagInputItemComponent]
 })
 export class TagInputComponent {
-  @Input() placeholder: string = 'Add a tag';
-  @Input() ngModel: string[];
-  @Input() delimiterCode: Array<number> = [188];
-  @Input() addOnBlur: boolean = true;
-  @Input() addOnEnter: boolean = true;
-  @Input() addOnPaste: boolean = true;
-  @Input() allowedTagsPattern: RegExp = /.+/;
-  @HostBinding('class.ng2-tag-input-focus') isFocussed;
+    @Input() placeholder :string = 'Add a tag';
+    @Input() ngModel :string[];
+    @Input() delimiters :string = ",:;";
+    @Input() tagIdentifierFront :string = "#";
+    @Input() addOnBlur :boolean = true;
+    @Input() addOnEnter :boolean = true;
+    @Input() addOnPaste :boolean = true;
+    @Input() allowedTagsPattern :RegExp = /.+/;
+    @Input() resetInputAfterTagCreation :boolean;
+    @HostBinding('class.ng2-tag-input-focus') isFocussed;
 
-  public tagsList: string[] = [];
-  public inputValue: string = '';
-  public selectedTag: number;
 
-  constructor(private _ngControl: NgControl) {
-    this._ngControl.valueAccessor = this;
-  }
+    private createTagsByPattern :RegExp = new RegExp(`(${this.tagIdentifierFront}\\b\\w+)|(\\w+[${this.delimiters}])`, "g");
+    public tagsList :string[] = [];
+    public inputValue :string = '';
+    public selectedTag :number;
 
-  ngOnInit() {
-    if (this.ngModel) this.tagsList = this.ngModel;
-    this.onChange(this.tagsList);
-  }
+    constructor(private _ngControl :NgControl) {
+        this._ngControl.valueAccessor = this;
+    }
 
-  inputChanged(event) {
-    let key = event.keyCode;
-    switch(key) {
-      case 8: // Backspace
-        this._handleBackspace();
-        break;
-      case 13: //Enter
-        this.addOnEnter && this._addTags([this.inputValue]);
-        event.preventDefault();
-        break;
+    ngOnInit() {
+        if (this.ngModel) this.tagsList = this.ngModel;
+        this.onChange(this.tagsList);
+    }
 
-      default:
-        this.delimiterCode.forEach( delimiter => {
-            if(key == delimiter) {
-                this._addTags([this.inputValue]);
+    inputChanged(event) {
+        let key = event.keyCode;
+        let matches :string[];
+        switch (key) {
+            case 8: // Backspace
+                this._handleBackspace();
+                break;
+            case 13: //Enter
+                this.addOnEnter && this._addTags([this.inputValue]);
                 event.preventDefault();
-            }
-        });
+                break;
+            case 32: //Space
+                this._extractTags() && event.preventDefault();
+                break;
+            default:
+                this._resetSelected();
+                break;
+        }
+    }
+
+    inputBlurred(event) {
+        this.addOnBlur && this._extractTags();
+        this.isFocussed = false;
+    }
+
+    inputFocused(event) {
+        this.isFocussed = true;
+    }
+
+    inputPaste(event) {
+        this._extractTags();
+    }
+
+    // private _splitString(tagString: string) {
+    //   tagString = tagString.trim();
+    //   let tags = tagString.split((this.delimiterCode));
+    //   return tags.filter((tag) => !!tag);
+    // }
+    private _extractTags() :boolean {
+        if (this.createTagsByPattern.test(this.inputValue)) {
+            let matches = this.inputValue.match(this.createTagsByPattern);
+            matches = matches.map((match) =>
+                match.replace(new RegExp('[' + this.tagIdentifierFront + this.delimiters + ']', 'g'), '')
+            );
+            this.inputValue = this.inputValue.replace(this.createTagsByPattern, "");
+            this._addTags(matches);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    private _isTagValid(tagString :string) {
+        return this.allowedTagsPattern.test(tagString);
+    }
+
+    private _addTags(tags :string[]) {
+        let validTags = tags.filter((tag) => this._isTagValid(tag));
+        this.tagsList = this.tagsList.concat(validTags);
         this._resetSelected();
-        break;
+        if (this.resetInputAfterTagCreation)
+            this._resetInput();
+        this.onChange(this.tagsList);
     }
-  }
 
-  inputBlurred(event) {
-    this.addOnBlur && this._addTags([this.inputValue]);
-    this.isFocussed = false;
-  }
-  inputFocused(event) {
-    this.isFocussed = true;
-  }
-
-  inputPaste(event) {
-    let clipboardData = event.clipboardData || (event.originalEvent && event.originalEvent.clipboardData);
-    let pastedString = clipboardData.getData('text/plain');
-    let tags = this._splitString(pastedString);
-    let tagsToAdd = tags.filter((tag) => this._isTagValid(tag));
-    this._addTags(tagsToAdd);
-    setTimeout(() => this.inputValue = '', 3000);
-  }
-
-  private _splitString(tagString: string) {
-    tagString = tagString.trim();
-    let tags = tagString.split(String.fromCharCode(this.delimiter));
-    return tags.filter((tag) => !!tag);
-  }
-
-  private _isTagValid(tagString: string) {
-    return this.allowedTagsPattern.test(tagString);
-  }
-
-  private _addTags(tags: string[]) {
-    let validTags = tags.filter((tag) => this._isTagValid(tag));
-    this.tagsList = this.tagsList.concat(validTags);
-    this._resetSelected();
-    this._resetInput();
-    this.onChange(this.tagsList);
-  }
-
-  private _removeTag(tagIndexToRemove) {
-    this.tagsList.splice(tagIndexToRemove, 1);
-    this._resetSelected();
-    this.onChange(this.tagsList);
-  }
-
-  private _handleBackspace() {
-    if (!this.inputValue.length && this.tagsList.length) {
-      if (!isBlank(this.selectedTag)) {
-        this._removeTag(this.selectedTag);
-      }
-      else {
-        this.selectedTag = this.tagsList.length - 1;
-      }
+    private _removeTag(tagIndexToRemove) {
+        this.tagsList.splice(tagIndexToRemove, 1);
+        this._resetSelected();
+        this.onChange(this.tagsList);
     }
-  }
 
-  private _resetSelected() {
-    this.selectedTag = null;
-  }
+    private _handleBackspace() {
+        if (!this.inputValue.length && this.tagsList.length) {
+            if (!isBlank(this.selectedTag)) {
+                this._removeTag(this.selectedTag);
+            }
+            else {
+                this.selectedTag = this.tagsList.length - 1;
+            }
+        }
+    }
 
-  private _resetInput() {
-    this.inputValue = '';
-  }
+    private _resetSelected() {
+        this.selectedTag = null;
+    }
 
-  /** Implemented as part of ControlValueAccessor. */
-  onChange: (value) => any = () => { };
+    private _resetInput() {
+        this.inputValue = '';
+    }
 
-  onTouched: () => any = () => { };
+    /** Implemented as part of ControlValueAccessor. */
+    onChange :(value :any) => any = (value) => {
+    };
 
-  writeValue(value: any) { }
+    onTouched :() => any = () => {
+    };
 
-  registerOnChange(fn: any) {
-    this.onChange = fn;
-  }
+    writeValue(value :any) {
+    }
 
-  registerOnTouched(fn: any) {
-    this.onTouched = fn;
-  }
+    registerOnChange(fn :any) {
+        this.onChange = fn;
+    }
+
+    registerOnTouched(fn :any) {
+        this.onTouched = fn;
+    }
 }

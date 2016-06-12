@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Angular 2 QuickStart</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- 1. Load libraries -->
+    <script src="node_modules/core-js/client/shim.min.js"></script>
+
+    <!-- Load the libraries that Angular depends on -->
+    <script src="node_modules/zone.js/dist/zone.js"></script>
+    <script src="node_modules/reflect-metadata/Reflect.js"></script>
+    <script src="node_modules/systemjs/dist/system.src.js"></script>
+
+
+    <!-- 2. Configure SystemJS -->
+    <!-- Config is done in separate file -->
+    <script src="systemjs.config.js"></script>
+    <script>
+        // Get the main.js file to bootstrap the application. From there on, all the other files are imported via
+        // import statements that trigger systemjs' import mechanism again.
+        System.import('app').catch(function(err){ console.error(err); });
+    </script>
+</head>
+
+<!-- 3. Display the application -->
+<body>
+<my-app>Loading...</my-app>
+</body>
+</html>
+
+
+<!--
+Copyright 2016 Google Inc. All Rights Reserved.
+Use of this source code is governed by an MIT-style license that
+can be found in the LICENSE file at http://angular.io/license
+-->
